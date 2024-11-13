@@ -61,7 +61,7 @@ class Server {
       return false;
     }
 
-    printf("Rendezvous.\n", clients);
+    printf("Rendezvous.\n");
 
     SendAddress(info[0], info[1]);
     SendAddress(info[1], info[0]);
