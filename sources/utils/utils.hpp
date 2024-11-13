@@ -16,11 +16,21 @@
 #define ASSERT(condition, ...)  \
 do {                            \
   if (!(condition)) {           \
-    perror("Error");            \
     printf(__VA_ARGS__);        \
+    perror("Error");            \
     exit(1);                    \
   }                             \
 } while(0)
+
+// ============================================================================
+
+struct ClientInfo {
+  in_addr_t local_ip = 0;
+  in_port_t local_port = 0;
+  in_addr_t global_ip = 0;
+  in_port_t global_port = 0;
+  uint8_t id = 0;
+};
 
 // ============================================================================
 

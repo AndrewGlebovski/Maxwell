@@ -1,6 +1,6 @@
 /**
  * \file
- * \brief Contains UDP server implementation.
+ * \brief Contains server implementation.
 */
 
 // ============================================================================
@@ -18,10 +18,8 @@
 // ============================================================================
 
 class Server {
-  static constexpr size_t kBufferSize = 508;
- 
  public:
-  // Creates socket and binds it to the provided address.
+  /// Creates socket and binds it to the provided address.
   Server(in_addr_t ip, in_port_t port) {
     sock = socket(AF_INET, SOCK_DGRAM, 0);
     ASSERT(sock > -1, "Failed to create passive socket.\n");
@@ -36,7 +34,7 @@ class Server {
   Server(const Server&) = delete;
   Server& operator=(const Server&) = delete;
 
-  // Collects client addresses.
+  /// Collects client addresses.
   void Listen() {
     sockaddr_in addr = {};
     socklen_t addr_len = sizeof(sockaddr_in);
@@ -44,12 +42,17 @@ class Server {
     const size_t BufferSize = sizeof(in_addr_t) + sizeof(in_port_t);
     char buffer[BufferSize];
 
-    int error = recvfrom(sock, buffer, sizeof(int), 0, (sockaddr*)(&addr), &addr_len);
-    ASSERT(error == sizeof(int), "Failed to receive message.\n");
+    int error = recvfrom(sock, buffer, BufferSize, 0, (sockaddr*)(&addr), &addr_len);
+    ASSERT(error == BufferSize, "Failed to receive message.\n");
 
-    client_ip[clients] = *reinterpret_cast<in_addr_t*>(buffer);
-    client_port[clients] = *reinterpret_cast<in_port_t*>(buffer + sizeof(in_addr_t));
+    info[clients].local_ip = *reinterpret_cast<in_addr_t*>(buffer);
+    info[clients].local_port = *reinterpret_cast<in_port_t*>(buffer + sizeof(in_addr_t));
+    info[clients].global_ip = addr.sin_addr.s_addr;
+    info[clients].global_port = addr.sin_port;
+    info[clients].id = clients;
     clients++;
+
+    printf("Client %lu arrived.\n", clients);
   }
 
   /// Sends clients addresses to each other.
@@ -58,35 +61,38 @@ class Server {
       return false;
     }
 
-    SendAddress(0, 1);
-    SendAddress(1, 0);
+    printf("Rendezvous.\n", clients);
+
+    SendAddress(info[0], info[1]);
+    SendAddress(info[1], info[0]);
 
     return true;
   }
 
-  // Closes socket.
+  /// Closes socket.
   ~Server() {
     ASSERT(close(sock) == 0, "Failed to close.\n");
   }
 
  private:
   /// Sends ip and port of source client to destination client. 
-  void SendAddress(size_t src, size_t dst) {
-    const size_t BufferSize = sizeof(in_addr_t) + sizeof(in_port_t);
-    char buffer[BufferSize];
+  void SendAddress(const ClientInfo& src, const ClientInfo& dst) {
+    char buffer[sizeof(ClientInfo)];
+    WriteClientInfo(buffer, src);
 
-    sockaddr_in addr = CreateSockaddr(client_ip[dst], client_port[dst]);
+    sockaddr_in addr = CreateSockaddr(dst.global_ip, dst.global_port);
 
-    *reinterpret_cast<in_addr_t*>(buffer) = client_ip[src];
-    *reinterpret_cast<in_port_t*>(buffer + sizeof(in_addr_t)) = client_port[src];
+    int error = sendto(sock, buffer, sizeof(ClientInfo), 0, (sockaddr*)(&addr), sizeof(addr));
+    ASSERT(error == sizeof(ClientInfo), "Failed to send message.\n");
+  }
 
-    int error = sendto(sock, buffer, BufferSize, 0, (sockaddr*)(&addr), sizeof(addr));
-    ASSERT(error == BufferSize, "Failed to send message.\n");
+  /// Writes ClientInfo structure to buffer. 
+  void WriteClientInfo(void* buffer, const ClientInfo& info) {
+    memcpy(buffer, &info, sizeof(ClientInfo));
   }
 
   int sock = -1;
-  in_addr_t client_ip[2] = {0, 0};
-  in_port_t client_port[2] = {0, 0};
+  ClientInfo info[2];
   size_t clients = 0;
 };
 
