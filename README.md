@@ -16,7 +16,7 @@ NAT Hole Punching application.
 ./Server server-ip server-port
 ```
 
-После этого можно запускать клиентов (client-ip и client-port это адреса клиента в локальной сети):
+После этого можно запускать клиентов (client-ip и client-port это адрес клиента в локальной сети):
 
 ```sh
 ./Client client-ip client-port server-ip server-port
