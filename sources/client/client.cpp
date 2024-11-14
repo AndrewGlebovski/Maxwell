@@ -57,22 +57,7 @@ class Client {
     error = recv(sock, &info, sizeof(ClientInfo), 0);
     ASSERT(error == sizeof(ClientInfo), "Failed to receive STUN server response.\n");
 
-    // Punching via friend local address
-
-    addr = CreateSockaddr(info.local_ip, info.local_port);
-
     set_recv_timeout(0, 1000);
-
-    if (LocalPunch(addr)) {
-      printf("Local connection established.\n");
-
-      set_recv_timeout(10, 0);
-
-      friend_ip = info.local_ip;
-      friend_port = info.local_port;
-
-      return info.id;
-    }
 
     // Punching via friend global address
 
@@ -85,6 +70,21 @@ class Client {
 
       friend_ip = info.global_ip;
       friend_port = info.global_port;
+
+      return info.id;
+    }
+
+    // Punching via friend local address
+
+    addr = CreateSockaddr(info.local_ip, info.local_port);
+
+    if (LocalPunch(addr)) {
+      printf("Local connection established.\n");
+
+      set_recv_timeout(10, 0);
+
+      friend_ip = info.local_ip;
+      friend_port = info.local_port;
 
       return info.id;
     }
@@ -144,7 +144,7 @@ class Client {
     return true;
   }
 
-  /// Always works.
+  /// Always works except for clients in the same network.
   bool GlobalPunch(sockaddr_in addr) {
     char buffer = '1';
 
